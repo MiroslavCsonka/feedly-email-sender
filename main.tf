@@ -9,6 +9,26 @@ provider "aws" {
   region = "eu-west-2"
 }
 
+resource "aws_cloudwatch_event_rule" "daily" {
+  name                = "daily"
+  description         = "Once a day"
+  schedule_expression = "rate(1 day)"
+}
+
+resource "aws_cloudwatch_event_target" "send-email-daily" {
+  rule      = aws_cloudwatch_event_rule.daily.name
+  target_id = "lambda"
+  arn       = aws_lambda_function.feedly-sender-terraform.arn
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch_to_call_check_foo" {
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.feedly-sender-terraform.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.daily.arn
+}
+
 resource "aws_iam_role" "feedly_sender_role_terraform" {
   name = "feedly_sender_role_terraform"
 

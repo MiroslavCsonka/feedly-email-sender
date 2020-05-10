@@ -9,8 +9,8 @@ provider "aws" {
   region = "eu-west-2"
 }
 
-resource "aws_iam_role" "feedly-sender-role-terraform" {
-  name = "feedly-sender-role-terraform"
+resource "aws_iam_role" "feedly_sender_role_terraform" {
+  name = "feedly_sender_role_terraform"
 
   assume_role_policy = <<EOF
 {
@@ -29,8 +29,8 @@ resource "aws_iam_role" "feedly-sender-role-terraform" {
 EOF
 }
 
-resource "aws_iam_policy" "policy" {
-  name        = "send-email-policy"
+resource "aws_iam_policy" "send_email_policy" {
+  name        = "send_email_policy"
   description = "Policy for a AWS Lambda to send emails"
 
   policy = <<EOF
@@ -51,20 +51,17 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "does-not-matter" {
-  role       = aws_iam_role.feedly-sender-role-terraform.name
-  policy_arn = aws_iam_policy.policy.arn
+  role       = aws_iam_role.feedly_sender_role_terraform.name
+  policy_arn = aws_iam_policy.send_email_policy.arn
 }
 
-# This is to optionally manage the CloudWatch Log Group for the Lambda Function.
-# If skipping this resource configuration, also add "logs:CreateLogGroup" to the IAM policy below.
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
   name              = "/aws/lambda/${var.lambda_name}"
   retention_in_days = 3
 }
 
-# See also the following AWS managed policy: AWSLambdaBasicExecutionRole
-resource "aws_iam_policy" "lambda_logging" {
-  name        = "lambda_logging"
+resource "aws_iam_policy" "lambda_logging_policy" {
+  name        = "lambda_logging_policy"
   path        = "/"
   description = "IAM policy for logging from a lambda"
 
@@ -87,8 +84,8 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.feedly-sender-role-terraform.name
-  policy_arn = aws_iam_policy.lambda_logging.arn
+  role       = aws_iam_role.feedly_sender_role_terraform.name
+  policy_arn = aws_iam_policy.lambda_logging_policy.arn
 }
 
 data "archive_file" "lambda_zip" {
@@ -104,7 +101,7 @@ resource "aws_lambda_function" "feedly-sender-terraform" {
   filename = data.archive_file.lambda_zip.output_path
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
-  role = aws_iam_role.feedly-sender-role-terraform.arn
+  role = aws_iam_role.feedly_sender_role_terraform.arn
 
   environment {
     variables = {

@@ -6,11 +6,8 @@ Feedly is great for collecting a lot of articles through RSS. My workflow is to 
 2. Removes it from "Saved for later"
 3. Emails a link to that article 
 
-
-
 Set up:
-- Create an AWS Lambda function with the code from this repo
-- Verify you can send emails with AWS SES
-- Allow the AWS Lambda to send email with AWS SES (by adding a new policy to the role)
-- Configure `FEEDLY_AUTH_TOKEN` and `SAVED_LATER_STREAM_ID`
-- Create an AWS Cloudwatch scheduled triggers to kick off the Lambda
+- verify you can send emails with AWS SES
+- configure `TF_VAR_saved_later_stream_id` and `TF_VAR_feedly_auth_token` in your local env
+- run `terraform init`
+- run `terraform apply` to provision the AWS Lambda, AWS Cloudwatch scheduled event, roles, and policies

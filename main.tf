@@ -2,20 +2,13 @@ variable "feedly_auth_token" {}
 variable "saved_later_stream_id" {}
 variable "raindrop_auth_token" {}
 
-variable "from_email" {
-  default = "miroslavcsonka@miroslavcsonka.com"
-}
-
-variable "to_email" {
-  default = "miroslavcsonka@miroslavcsonka.com"
-}
-
-variable "feedly_lambda_name" {
-  default = "feedly-sender-terraform"
-}
-
-variable "raindrop_lambda_name" {
-  default = "raindrop-sender-terraform"
+locals {
+  from_email = "miroslavcsonka@miroslavcsonka.com"
+  to_email = "miroslavcsonka@miroslavcsonka.com"
+  services = {
+    feedly_lambda_name =  "feedly-sender-terraform"
+    raindrop_lambda_name= "raindrop-sender-terraform"
+  }
 }
 
 provider "aws" {
@@ -103,12 +96,12 @@ resource "aws_iam_role_policy_attachment" "does-not-matter" {
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group_feedly" {
-  name              = "/aws/lambda/${var.feedly_lambda_name}"
+  name              = "/aws/lambda/${local.services.feedly_lambda_name}"
   retention_in_days = 3
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group_raindrop" {
-  name              = "/aws/lambda/${var.raindrop_lambda_name}"
+  name              = "/aws/lambda/${local.services.raindrop_lambda_name}"
   retention_in_days = 3
 }
 
@@ -147,7 +140,7 @@ data "archive_file" "lambda_zip" {
 }
 
 resource "aws_lambda_function" "feedly-sender-terraform" {
-  function_name = var.feedly_lambda_name
+  function_name = local.services.feedly_lambda_name
   handler = "lambda_function.lambda_handler"
   runtime = "ruby2.7"
   filename = data.archive_file.lambda_zip.output_path
@@ -157,8 +150,8 @@ resource "aws_lambda_function" "feedly-sender-terraform" {
 
   environment {
     variables = {
-      FROM_EMAIL = var.from_email
-      TO_EMAIL = var.to_email
+      FROM_EMAIL = local.from_email
+      TO_EMAIL = local.to_email
       FEEDLY_AUTH_TOKEN = var.feedly_auth_token
       SAVED_LATER_STREAM_ID = var.saved_later_stream_id
       SERVICE = "feedly"
@@ -169,7 +162,7 @@ resource "aws_lambda_function" "feedly-sender-terraform" {
 }
 
 resource "aws_lambda_function" "raindrop-sender-terraform" {
-  function_name = var.raindrop_lambda_name
+  function_name = local.services.raindrop_lambda_name
   handler = "lambda_function.lambda_handler"
   runtime = "ruby2.7"
   filename = data.archive_file.lambda_zip.output_path
@@ -179,8 +172,8 @@ resource "aws_lambda_function" "raindrop-sender-terraform" {
 
   environment {
     variables = {
-      FROM_EMAIL = var.from_email
-      TO_EMAIL = var.to_email
+      FROM_EMAIL = local.from_email
+      TO_EMAIL = local.to_email
       RAINDROP_AUTH_TOKEN = var.raindrop_auth_token
       SERVICE = "raindrop"
     }

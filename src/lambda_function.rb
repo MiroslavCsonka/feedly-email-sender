@@ -5,8 +5,8 @@ require_relative './feedly'
 require_relative './raindrop'
 require_relative './send-email'
 
-FROM_EMAIL = 'miroslavcsonka@miroslavcsonka.com'
-TO_EMAIl = 'miroslavcsonka@miroslavcsonka.com'
+FROM_EMAIL = ENV.fetch('FROM_EMAIL')
+TO_EMAIl = ENV.fetch('TO_EMAIL')
 SERVICE_TO_RUN = ENV.fetch('SERVICE')
 
 def run(client, link_field_name)

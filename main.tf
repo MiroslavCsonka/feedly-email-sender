@@ -2,6 +2,14 @@ variable "feedly_auth_token" {}
 variable "saved_later_stream_id" {}
 variable "raindrop_auth_token" {}
 
+variable "from_email" {
+  default = "miroslavcsonka@miroslavcsonka.com"
+}
+
+variable "to_email" {
+  default = "miroslavcsonka@miroslavcsonka.com"
+}
+
 variable "feedly_lambda_name" {
   default = "feedly-sender-terraform"
 }
@@ -149,6 +157,8 @@ resource "aws_lambda_function" "feedly-sender-terraform" {
 
   environment {
     variables = {
+      FROM_EMAIL = var.from_email
+      TO_EMAIL = var.to_email
       FEEDLY_AUTH_TOKEN = var.feedly_auth_token
       SAVED_LATER_STREAM_ID = var.saved_later_stream_id
       SERVICE = "feedly"
@@ -169,6 +179,8 @@ resource "aws_lambda_function" "raindrop-sender-terraform" {
 
   environment {
     variables = {
+      FROM_EMAIL = var.from_email
+      TO_EMAIL = var.to_email
       RAINDROP_AUTH_TOKEN = var.raindrop_auth_token
       SERVICE = "raindrop"
     }

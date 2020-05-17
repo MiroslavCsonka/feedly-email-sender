@@ -8,6 +8,7 @@ Feedly is great for collecting a lot of articles through RSS. My workflow is to 
 
 Set up:
 - verify you can send emails with AWS SES
-- configure `TF_VAR_saved_later_stream_id` and `TF_VAR_feedly_auth_token` in your local env
+- Configure `TF_VAR_saved_later_stream_id`, `TF_VAR_feedly_auth_token`, and [`TF_VAR_raindrop_auth_token`](https://app.raindrop.io/#/settings/apps/dev) in your local env
+- Change emails in `main.tf`
 - run `terraform init`
 - run `terraform apply` to provision the AWS Lambda, AWS Cloudwatch scheduled event, roles, and policies

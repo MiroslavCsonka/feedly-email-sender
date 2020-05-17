@@ -1,4 +1,5 @@
 .env
 dist/
+.terraform.*
 .terraform/
 terraform.*

@@ -1,8 +1,13 @@
 variable "feedly_auth_token" {}
 variable "saved_later_stream_id" {}
+variable "raindrop_auth_token" {}
 
-variable "lambda_name" {
+variable "feedly_lambda_name" {
   default = "feedly-sender-terraform"
+}
+
+variable "raindrop_lambda_name" {
+  default = "raindrop-sender-terraform"
 }
 
 provider "aws" {
@@ -15,13 +20,19 @@ resource "aws_cloudwatch_event_rule" "daily" {
   schedule_expression = "rate(1 day)"
 }
 
-resource "aws_cloudwatch_event_target" "send-email-daily" {
+resource "aws_cloudwatch_event_target" "send-email-daily-feedly" {
   rule      = aws_cloudwatch_event_rule.daily.name
   target_id = "lambda"
   arn       = aws_lambda_function.feedly-sender-terraform.arn
 }
 
-resource "aws_lambda_permission" "allow_cloudwatch_to_call_check_foo" {
+resource "aws_cloudwatch_event_target" "send-email-daily-raindrop" {
+  rule      = aws_cloudwatch_event_rule.daily.name
+  target_id = "lambda"
+  arn       = aws_lambda_function.raindrop-sender-terraform.arn
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch_to_trigger_feedly" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.feedly-sender-terraform.function_name
@@ -29,8 +40,16 @@ resource "aws_lambda_permission" "allow_cloudwatch_to_call_check_foo" {
   source_arn    = aws_cloudwatch_event_rule.daily.arn
 }
 
-resource "aws_iam_role" "feedly_sender_role_terraform" {
-  name = "feedly_sender_role_terraform"
+resource "aws_lambda_permission" "allow_cloudwatch_to_trigger_raindrop" {
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.raindrop-sender-terraform.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.daily.arn
+}
+
+resource "aws_iam_role" "assume_lambda_role" {
+  name = "assume_lambda_role"
 
   assume_role_policy = <<EOF
 {
@@ -71,12 +90,17 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "does-not-matter" {
-  role       = aws_iam_role.feedly_sender_role_terraform.name
+  role       = aws_iam_role.assume_lambda_role.name
   policy_arn = aws_iam_policy.send_email_policy.arn
 }
 
-resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  name              = "/aws/lambda/${var.lambda_name}"
+resource "aws_cloudwatch_log_group" "lambda_log_group_feedly" {
+  name              = "/aws/lambda/${var.feedly_lambda_name}"
+  retention_in_days = 3
+}
+
+resource "aws_cloudwatch_log_group" "lambda_log_group_raindrop" {
+  name              = "/aws/lambda/${var.raindrop_lambda_name}"
   retention_in_days = 3
 }
 
@@ -104,7 +128,7 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.feedly_sender_role_terraform.name
+  role       = aws_iam_role.assume_lambda_role.name
   policy_arn = aws_iam_policy.lambda_logging_policy.arn
 }
 
@@ -115,20 +139,40 @@ data "archive_file" "lambda_zip" {
 }
 
 resource "aws_lambda_function" "feedly-sender-terraform" {
-  function_name = var.lambda_name
+  function_name = var.feedly_lambda_name
   handler = "lambda_function.lambda_handler"
   runtime = "ruby2.7"
   filename = data.archive_file.lambda_zip.output_path
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
-  role = aws_iam_role.feedly_sender_role_terraform.arn
+  role = aws_iam_role.assume_lambda_role.arn
 
   environment {
     variables = {
       FEEDLY_AUTH_TOKEN = var.feedly_auth_token
       SAVED_LATER_STREAM_ID = var.saved_later_stream_id
+      SERVICE = "feedly"
     }
   }
 
-  depends_on = [aws_iam_role_policy_attachment.lambda_logs, aws_cloudwatch_log_group.lambda_log_group]
+  depends_on = [aws_iam_role_policy_attachment.lambda_logs, aws_cloudwatch_log_group.lambda_log_group_feedly]
+}
+
+resource "aws_lambda_function" "raindrop-sender-terraform" {
+  function_name = var.raindrop_lambda_name
+  handler = "lambda_function.lambda_handler"
+  runtime = "ruby2.7"
+  filename = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+
+  role = aws_iam_role.assume_lambda_role.arn
+
+  environment {
+    variables = {
+      RAINDROP_AUTH_TOKEN = var.raindrop_auth_token
+      SERVICE = "raindrop"
+    }
+  }
+
+  depends_on = [aws_iam_role_policy_attachment.lambda_logs, aws_cloudwatch_log_group.lambda_log_group_raindrop]
 }

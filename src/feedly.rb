@@ -18,7 +18,7 @@ class Feedly
     )
   end
 
-  def remove_from_saved_later(item)
+  def delete(item)
     tagid = item.fetch('tags').find { |tag| tag.fetch('label') == 'Saved For Later' }.fetch('id')
     HttpStuff.delete(
       "https://feedly.com/v3/tags/#{CGI.escape(tagid)}/#{CGI.escape(item.fetch('id'))}",

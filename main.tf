@@ -5,154 +5,44 @@ variable "raindrop_auth_token" {}
 locals {
   from_email = "miroslavcsonka@miroslavcsonka.com"
   to_email = "miroslavcsonka@miroslavcsonka.com"
-  services = {
-    feedly_lambda_name =  {
-      name = "feedly-sender-terraform"
-      vars = {
-      FROM_EMAIL = local.from_email
-      TO_EMAIL = local.to_email
-      FEEDLY_AUTH_TOKEN = var.feedly_auth_token
-      SAVED_LATER_STREAM_ID = var.saved_later_stream_id
-      SERVICE = "feedly"
-      }
-    }
-    raindrop_lambda_name= {
-      name = "raindrop-sender-terraform"
-      vars = {
-        FROM_EMAIL = local.from_email
-        TO_EMAIL = local.to_email
-        RAINDROP_AUTH_TOKEN = var.raindrop_auth_token
-        SERVICE = "raindrop"
-      }
-    }
-  }
 }
 
 provider "aws" {
   region = "eu-west-2"
 }
 
-resource "aws_cloudwatch_event_rule" "daily" {
-  name                = "daily"
-  description         = "Once a day"
-  schedule_expression = "rate(1 day)"
+module "feedly-service" {
+  source = "./modules/service"
+
+  name = "feedly-sender"
+
+  env = {
+    FROM_EMAIL = local.from_email
+    TO_EMAIL = local.to_email
+    FEEDLY_AUTH_TOKEN = var.feedly_auth_token
+    SAVED_LATER_STREAM_ID = var.saved_later_stream_id
+    SERVICE = "feedly"
+  }
 }
 
-resource "aws_cloudwatch_event_target" "send-email-daily" {
-  for_each = local.services
-  rule      = aws_cloudwatch_event_rule.daily.name
-  target_id = "lambda"
-  arn       = aws_lambda_function.sender-function[each.key].arn
-}
+module "raindrop-service" {
+  source = "./modules/service"
 
-resource "aws_lambda_permission" "allow_cloudwatch_to_trigger_sender_function" {
-  for_each = local.services
-  statement_id  = "AllowExecutionFromCloudWatch"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.sender-function[each.key].function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.daily.arn
-}
+  name = "raindrop-sender"
 
-resource "aws_iam_role" "assume_lambda_role" {
-  name = "assume_lambda_role"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "lambda.amazonaws.com"
-      },
-      "Effect": "Allow",
-      "Sid": ""
-    }
-  ]
-}
-EOF
-}
-
-resource "aws_iam_policy" "send_email_policy" {
-  name        = "send_email_policy"
-  description = "Policy for a AWS Lambda to send emails"
-
-  policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ses:SendEmail",
-                "ses:SendRawEmail"
-            ],
-            "Resource": "*"
-        }
-    ]
-}
-EOF
-}
-
-resource "aws_iam_role_policy_attachment" "does-not-matter" {
-  role       = aws_iam_role.assume_lambda_role.name
-  policy_arn = aws_iam_policy.send_email_policy.arn
-}
-
-resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  for_each = local.services
-  name              = "/aws/lambda/${each.value.name}"
-  retention_in_days = 3
-}
-
-resource "aws_iam_policy" "lambda_logging_policy" {
-  name        = "lambda_logging_policy"
-  path        = "/"
-  description = "IAM policy for logging from a lambda"
-
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ],
-      "Resource": "arn:aws:logs:*:*:*",
-      "Effect": "Allow"
-    }
-  ]
-}
-EOF
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.assume_lambda_role.name
-  policy_arn = aws_iam_policy.lambda_logging_policy.arn
-}
-
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  source_dir  = "src"
-  output_path = "dist/function.zip"
-}
-
-resource "aws_lambda_function" "sender-function" {
-  for_each = local.services
-  function_name = each.value.name
-  handler = "lambda_function.lambda_handler"
-  runtime = "ruby2.7"
-  filename = data.archive_file.lambda_zip.output_path
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
-
-  role = aws_iam_role.assume_lambda_role.arn
-
-  environment {
-    variables = each.value.vars
+  env = {
+    FROM_EMAIL = local.from_email
+    TO_EMAIL = local.to_email
+    RAINDROP_AUTH_TOKEN = var.raindrop_auth_token
+    SERVICE = "raindrop"
   }
 
-  depends_on = [aws_iam_role_policy_attachment.lambda_logs, aws_cloudwatch_log_group.lambda_log_group]
+}
+
+output "feedly-arn" {
+  value = module.feedly-service.arn
+}
+
+output "raindrop-arn" {
+  value = module.raindrop-service.arn
 }

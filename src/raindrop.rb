@@ -10,7 +10,7 @@ class Raindrop
   end
 
   def items
-    HttpStuff.get('https://api.raindrop.io/rest/v1/raindrops/-1', auth_headers)
+    HttpStuff.get('https://api.raindrop.io/rest/v1/raindrops/-1?sort=created', auth_headers)
   end
 
   def delete(item)

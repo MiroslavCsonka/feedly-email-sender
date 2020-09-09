@@ -30,7 +30,7 @@ def run(client, link_field_name)
   email_sent = send_email(
     from: FROM_EMAIL,
     to: TO_EMAIl,
-    subject: "Read: #{title}",
+    subject: "Read: #{title} (from #{client.class})",
     body: url
   )
   output[:email_sending] = email_sent

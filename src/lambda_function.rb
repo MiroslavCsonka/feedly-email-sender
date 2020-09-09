@@ -9,7 +9,7 @@ FROM_EMAIL = ENV.fetch('FROM_EMAIL')
 TO_EMAIl = ENV.fetch('TO_EMAIL')
 SERVICE_TO_RUN = ENV.fetch('SERVICE')
 
-def run(client, link_field_name)
+def run(client)
   items_response = client.items
 
   output = {
@@ -25,7 +25,7 @@ def run(client, link_field_name)
   return format_response(400, 'No more items to serve') unless item
 
   output[:item] = item
-  title, url = item.values_at('title', link_field_name)
+  title, url = item.values_at('title', client.link_field_name)
 
   email_sent = send_email(
     from: FROM_EMAIL,
@@ -51,9 +51,9 @@ def lambda_handler(event:, context:)
       ENV.fetch('FEEDLY_AUTH_TOKEN'),
       ENV.fetch('SAVED_LATER_STREAM_ID')
     )
-    run(feedly_client, 'canonicalUrl')
+    run(feedly_client)
   elsif SERVICE_TO_RUN == 'raindrop'
-    run(Raindrop.new(ENV.fetch('RAINDROP_AUTH_TOKEN')), 'link')
+    run(Raindrop.new(ENV.fetch('RAINDROP_AUTH_TOKEN')))
   else
     format_response(400, { error: "Unknown service #{SERVICE_TO_RUN}" })
   end

@@ -17,6 +17,10 @@ class Raindrop
     HttpStuff.delete("https://api.raindrop.io/rest/v1/raindrop/#{item.fetch('_id')}", auth_headers)
   end
 
+  def link_field_name
+    'link'
+  end
+
   private
 
   def auth_headers

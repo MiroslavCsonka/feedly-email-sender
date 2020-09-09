@@ -25,4 +25,8 @@ class Feedly
       { 'Authorization' => "OAuth #{token}" }
     )
   end
+
+  def link_field_name
+    'canonicalUrl'
+  end
 end
